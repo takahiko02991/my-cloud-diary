@@ -10,7 +10,7 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 # ★ 天気設定（あなたが取得した情報をセット）
-API_KEY = "71dda4072aee2d46828ef99cdc07131a"
+API_KEY = st.secrets["OPENWEATHER_API_KEY"]
 CITY_NAME = "Kitakyushu" # 福岡市なら "Fukuoka" に変更してください
 WEATHER_URL = f"http://api.openweathermap.org/data/2.5/weather?q={CITY_NAME}&appid={API_KEY}&units=metric&lang=ja"
 
@@ -75,6 +75,7 @@ for row in response.data:
                 supabase.table("diary").delete().eq("id", row['id']).execute()
                 st.rerun()
         st.write(row['content'])
+
 
 
 
