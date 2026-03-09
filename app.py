@@ -34,34 +34,41 @@ def get_weather():
         return None, None, None
 
 temp, desc, icon_url = get_weather()
-def show_weather_chart():
-    st.subheader("☀️ 北九州市の気温推移（24時間予報）")
+def show_multi_weather_chart():
+    st.subheader("🌡️ 北九州市 vs 西都市 気温比較")
 
-    # Open-Meteo APIのURL（北九州市の緯度経度を指定）
-    url = "https://api.open-meteo.com/v1/forecast?latitude=33.8833&longitude=130.8833&hourly=temperature_2m,relative_humidity_2m"
+    # 北九州(Kitakyushu)と西都市(Saito)の緯度経度
+    # 北九州: 33.88, 130.88 / 西都市: 32.11, 131.40
+    locations = {
+        "北九州市": {"lat": 33.8833, "lon": 130.8833},
+        "西都市": {"lat": 32.11, "lon": 131.40}
+    }
 
     try:
-        # APIからデータを取得
-        response = requests.get(url)
-        data = response.json()
+        combined_data = {}
+        
+        for name, coords in locations.items():
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={coords['lat']}&longitude={coords['lon']}&hourly=temperature_2m"
+            res = requests.get(url).json()
+            
+            # 初回だけ時間軸を作成
+            if not combined_data:
+                combined_data["時間"] = pd.to_datetime(res["hourly"]["time"])
+            
+            # 各都市の気温を追加
+            combined_data[name] = res["hourly"]["temperature_2m"]
 
-        # データをPandas DataFrameに変換
-        hourly = data["hourly"]
-        df = pd.DataFrame({
-            "時間": pd.to_datetime(hourly["time"]),
-            "気温(℃)": hourly["temperature_2m"],
-            "湿度(%)": hourly["relative_humidity_2m"]
-        })
+        # まとめてDataFrameにする
+        df = pd.DataFrame(combined_data).set_index("時間")
 
-        # 「時間」をインデックスに設定（グラフのX軸にするため）
-        df = df.set_index("時間")
-
-        # グラフを描画（Streamlitの標準機能）
+        # グラフを表示（自動で2本の線になります）
         st.line_chart(df)
         
+        st.info("宮崎（西都市）の方が暖かいかな？グラフの線で比較してみてね！")
+
     except Exception as e:
-        st.error("天気の取得に失敗しました...")
-        st.write(e)
+        st.error(f"データの取得に失敗しました: {e}")
+
 
 # --- 時刻と天気の表示エリア ---
 jp_tz = pytz.timezone('Asia/Tokyo')
@@ -79,7 +86,7 @@ with col_b:
         st.write(f"{temp}℃ / {desc}")
 
 st.divider()
-show_weather_chart()
+show_multi_weather_chart()
 # タイトル
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>📝 My Cloud Diary</h1>", unsafe_allow_html=True)
 
@@ -106,6 +113,7 @@ for row in response.data:
                 supabase.table("diary").delete().eq("id", row['id']).execute()
                 st.rerun()
         st.write(row['content'])
+
 
 
 
