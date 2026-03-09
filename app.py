@@ -173,7 +173,7 @@ def show_diary_calendar():
         for entry in diary_entries:
             # created_at (2026-03-09T...) を FullCalendar形式に変換
             calendar_events.append({
-                "title": entry["title"],
+                "title": entry["📝"],
                 "start": entry["created_at"],
                 "id": entry["id"],
                 "color": "#3D9970", # 日記がある日は緑色に
@@ -217,6 +217,7 @@ def show_diary_calendar():
 
 # 実行
 show_diary_calendar()
+
 
 
 
