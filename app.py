@@ -61,7 +61,49 @@ with col_s:
         st.write(f"**{temp_s}℃** / {desc_s}")
 
 st.divider()
+def show_weekly_forecast(city_name, lat, lon):
+    st.markdown(f"#### 📅 {city_name} の1週間予報")
+    
+    # Open-Meteoの「日次データ(daily)」を取得
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Asia%2FTokyo"
+    
+    try:
+        res = requests.get(url).json()
+        daily = res["daily"]
+        
+        # 7日分を横に並べるためのカラムを作成
+        cols = st.columns(7)
+        
+        # 天気コードをアイコンに変換する簡易的な辞書
+        # (0:快晴, 1-3:晴れ/曇り, 45-48:霧, 51-67:雨, 71-77:雪)
+        def get_weather_emoji(code):
+            if code == 0: return "☀️"
+            if code <= 3: return "☁️"
+            if code >= 51 and code <= 67: return "☔"
+            if code >= 71 and code <= 77: return "❄️"
+            return "🌦️"
 
+        for i in range(7):
+            with cols[i]:
+                # 日付を「月/日」の形式に
+                date = pd.to_datetime(daily["time"][i]).strftime("%m/%d")
+                emoji = get_weather_emoji(daily["weathercode"][i])
+                max_t = daily["temperature_2m_max"][i]
+                min_t = daily["temperature_2m_min"][i]
+                
+                # コンパクトに表示
+                st.write(f"**{date}**")
+                st.write(f"## {emoji}")
+                st.write(f"{max_t}℃")
+                st.write(f"_{min_t}℃_")
+
+    except Exception as e:
+        st.error(f"予報の取得に失敗しました: {e}")
+st.divider()
+# 北九州と西都、それぞれ表示
+show_weekly_forecast("北九州", 33.88, 130.88)
+st.write("") # 少し隙間をあける
+show_weekly_forecast("西都市", 32.11, 131.40)
 # --- 比較グラフの表示 ---
 def show_multi_weather_chart():
     st.subheader("🌡️ 北九州市 vs 西都市 気温比較")
@@ -112,6 +154,7 @@ for row in response.data:
                 supabase.table("diary").delete().eq("id", row['id']).execute()
                 st.rerun()
         st.write(row['content'])
+
 
 
 
