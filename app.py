@@ -132,7 +132,7 @@ st.divider()
 show_multi_weather_chart()
 
 # タイトル
-st.markdown("<h1 style='text-align: center; color: #4A90E2;'>📝 My Cloud Diary</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #4A90E2;'>📝 我が家の日記</h1>", unsafe_allow_html=True)
 
 # --- 入力・一覧表示エリア（以下は以前と同じ） ---
 with st.container(border=True):
@@ -159,6 +159,7 @@ for row in response.data:
         st.write(row['content'])
 
 st.divider()
+
 
 
 
