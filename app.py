@@ -3,6 +3,9 @@ from supabase import create_client
 from datetime import datetime
 import pytz
 import requests # 天気データを取得するために必要
+import streamlit as st
+import requests
+import pandas as pd
 
 # 1. 接続設定
 url = st.secrets["SUPABASE_URL"]
@@ -31,6 +34,34 @@ def get_weather():
         return None, None, None
 
 temp, desc, icon_url = get_weather()
+def show_weather_chart():
+    st.subheader("☀️ 北九州市の気温推移（24時間予報）")
+
+    # Open-Meteo APIのURL（北九州市の緯度経度を指定）
+    url = "https://api.open-meteo.com/v1/forecast?latitude=33.8833&longitude=130.8833&hourly=temperature_2m,relative_humidity_2m"
+
+    try:
+        # APIからデータを取得
+        response = requests.get(url)
+        data = response.json()
+
+        # データをPandas DataFrameに変換
+        hourly = data["hourly"]
+        df = pd.DataFrame({
+            "時間": pd.to_datetime(hourly["time"]),
+            "気温(℃)": hourly["temperature_2m"],
+            "湿度(%)": hourly["relative_humidity_2m"]
+        })
+
+        # 「時間」をインデックスに設定（グラフのX軸にするため）
+        df = df.set_index("時間")
+
+        # グラフを描画（Streamlitの標準機能）
+        st.line_chart(df)
+        
+    except Exception as e:
+        st.error("天気の取得に失敗しました...")
+        st.write(e)
 
 # --- 時刻と天気の表示エリア ---
 jp_tz = pytz.timezone('Asia/Tokyo')
@@ -48,7 +79,7 @@ with col_b:
         st.write(f"{temp}℃ / {desc}")
 
 st.divider()
-
+show_weather_chart()
 # タイトル
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>📝 My Cloud Diary</h1>", unsafe_allow_html=True)
 
@@ -75,6 +106,7 @@ for row in response.data:
                 supabase.table("diary").delete().eq("id", row['id']).execute()
                 st.rerun()
         st.write(row['content'])
+
 
 
 
