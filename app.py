@@ -165,7 +165,7 @@ def show_diary_calendar():
     # 1. Supabaseから日記データを取得
     try:
         # diariesテーブルから全データを取得（日付順）
-        res = supabase.table("diaries").select("*").execute()
+        res = supabase.table("diary").select("*").execute()
         diary_entries = res.data
 
         # 2. カレンダー用のイベントデータに変換
@@ -217,6 +217,7 @@ def show_diary_calendar():
 
 # 実行
 show_diary_calendar()
+
 
 
 
