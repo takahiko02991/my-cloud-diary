@@ -12,18 +12,25 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# ★ 天気設定（あなたが取得した情報をセット）
+import streamlit as st
+import requests
+import pandas as pd
+from datetime import datetime
+import pytz
+
+# ★ 設定
 API_KEY = st.secrets["OPENWEATHER_API_KEY"]
-CITY_NAME = "Kitakyushu" # 福岡市なら "Fukuoka" に変更してください
-WEATHER_URL = f"http://api.openweathermap.org/data/2.5/weather?q={CITY_NAME}&appid={API_KEY}&units=metric&lang=ja"
+jp_tz = pytz.timezone('Asia/Tokyo')
+current_time = datetime.now(jp_tz).strftime("%Y/%m/%d %H:%M")
 
 # ページ設定
 st.set_page_config(page_title="My Cloud Diary", page_icon="🌤️")
 
-# --- データ取得：天気 ---
-def get_weather():
+# --- データ取得：天気を共通化 ---
+def get_weather(city_name):
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={API_KEY}&units=metric&lang=ja"
     try:
-        response = requests.get(WEATHER_URL)
+        response = requests.get(url)
         data = response.json()
         temp = data["main"]["temp"]
         weather_desc = data["weather"][0]["description"]
@@ -33,60 +40,52 @@ def get_weather():
     except:
         return None, None, None
 
-temp, desc, icon_url = get_weather()
+# --- 時刻と天気の表示エリア ---
+st.markdown(f"### 🕒 {current_time}")
+
+# 2つのカラムで北九州と西都を並べる
+col_k, col_s = st.columns(2)
+
+with col_k:
+    temp_k, desc_k, icon_k = get_weather("Kitakyushu")
+    st.markdown("#### 📍 北九州市")
+    if temp_k:
+        st.image(icon_k, width=70)
+        st.write(f"**{temp_k}℃** / {desc_k}")
+
+with col_s:
+    temp_s, desc_s, icon_s = get_weather("Saito")
+    st.markdown("#### 📍 西都市")
+    if temp_s:
+        st.image(icon_s, width=70)
+        st.write(f"**{temp_s}℃** / {desc_s}")
+
+st.divider()
+
+# --- 比較グラフの表示 ---
 def show_multi_weather_chart():
     st.subheader("🌡️ 北九州市 vs 西都市 気温比較")
-
-    # 北九州(Kitakyushu)と西都市(Saito)の緯度経度
-    # 北九州: 33.88, 130.88 / 西都市: 32.11, 131.40
     locations = {
         "北九州市": {"lat": 33.8833, "lon": 130.8833},
         "西都市": {"lat": 32.11, "lon": 131.40}
     }
-
     try:
         combined_data = {}
-        
         for name, coords in locations.items():
             url = f"https://api.open-meteo.com/v1/forecast?latitude={coords['lat']}&longitude={coords['lon']}&hourly=temperature_2m"
             res = requests.get(url).json()
-            
-            # 初回だけ時間軸を作成
             if not combined_data:
                 combined_data["時間"] = pd.to_datetime(res["hourly"]["time"])
-            
-            # 各都市の気温を追加
             combined_data[name] = res["hourly"]["temperature_2m"]
 
-        # まとめてDataFrameにする
         df = pd.DataFrame(combined_data).set_index("時間")
-
-        # グラフを表示（自動で2本の線になります）
         st.line_chart(df)
-        
         st.info("宮崎（西都市）の方が暖かいかな？グラフの線で比較してみてね！")
-
     except Exception as e:
         st.error(f"データの取得に失敗しました: {e}")
 
-
-# --- 時刻と天気の表示エリア ---
-jp_tz = pytz.timezone('Asia/Tokyo')
-current_time = datetime.now(jp_tz).strftime("%Y/%m/%d %H:%M")
-
-# 画面表示
-col_a, col_b = st.columns([0.6, 0.4])
-with col_a:
-    st.markdown(f"#### 📍 {CITY_NAME}, Japan")
-    st.markdown(f"##### 🕒 {current_time}")
-
-with col_b:
-    if temp:
-        st.image(icon_url, width=70)
-        st.write(f"{temp}℃ / {desc}")
-
-st.divider()
 show_multi_weather_chart()
+
 # タイトル
 st.markdown("<h1 style='text-align: center; color: #4A90E2;'>📝 My Cloud Diary</h1>", unsafe_allow_html=True)
 
@@ -113,6 +112,7 @@ for row in response.data:
                 supabase.table("diary").delete().eq("id", row['id']).execute()
                 st.rerun()
         st.write(row['content'])
+
 
 
 
